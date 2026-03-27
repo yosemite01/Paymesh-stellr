@@ -523,3 +523,7 @@ mod transfer_group_ownership_test;
 #[cfg(test)]
 #[path = "tests/fundraising_reset_test.rs"]
 mod fundraising_reset_test;
+
+#[cfg(test)]
+#[path = "tests/group_name_validation_test.rs"]
+mod group_name_validation_test;
