@@ -503,6 +503,26 @@ impl AutoShareContract {
     pub fn get_min_contribution(env: Env) -> i128 {
         autoshare_logic::get_min_contribution(env)
     }
+
+    /// Returns a list of all active fundraising campaigns with their group IDs.
+    pub fn get_active_fundraisings(env: Env) -> Vec<base::types::ActiveFundraising> {
+        autoshare_logic::get_active_fundraisings(env)
+    }
+
+    /// Returns a list of all inactive (deactivated) groups.
+    pub fn get_inactive_groups(env: Env) -> Vec<BytesN<32>> {
+        autoshare_logic::get_inactive_groups(env)
+    }
+
+    /// Returns pre-aggregated statistics for a group.
+    pub fn get_group_stats(env: Env, id: BytesN<32>) -> base::types::GroupStats {
+        autoshare_logic::get_group_stats(env, id)
+    }
+
+    /// Returns the member count of a group without loading the full member list.
+    pub fn get_group_member_count(env: Env, id: BytesN<32>) -> u32 {
+        autoshare_logic::get_group_member_count(env, id).unwrap_or(0)
+    }
 }
 
 // 3. Link the tests (Requirement: Unit Tests)

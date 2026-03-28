@@ -98,6 +98,15 @@ pub struct FundraisingContribution {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GroupStats {
+    pub total_distributed: i128,
+    pub distribution_count: u32,
     pub total_raised: i128,
     pub contribution_count: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ActiveFundraising {
+    pub group_id: BytesN<32>,
+    pub config: FundraisingConfig,
 }

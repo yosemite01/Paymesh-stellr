@@ -7,8 +7,8 @@ use crate::base::events::{
 };
 
 use crate::base::types::{
-    AutoShareDetails, DistributionHistory, DistributionRecord, FundraisingConfig,
-    FundraisingContribution, GroupMember, GroupPage, GroupStats, MemberAmount,
+    ActiveFundraising, AutoShareDetails, DistributionHistory, DistributionRecord,
+    FundraisingConfig, FundraisingContribution, GroupMember, GroupPage, GroupStats, MemberAmount,
     MemberDistributionRecord, PaymentHistory,
 };
 use soroban_sdk::{contracttype, token, Address, BytesN, Env, String, Vec};
@@ -1878,6 +1878,23 @@ pub fn distribute(
         member_amounts.len() as u32,
     );
 
+    // Update group stats
+    let stats_key = DataKey::GroupStats(id.clone());
+    let mut stats: GroupStats = env
+        .storage()
+        .persistent()
+        .get(&stats_key)
+        .unwrap_or(GroupStats {
+            total_distributed: 0,
+            distribution_count: 0,
+            total_raised: 0,
+            contribution_count: 0,
+        });
+    stats.total_distributed += amount;
+    stats.distribution_count += 1;
+    env.storage().persistent().set(&stats_key, &stats);
+    bump_persistent(&env, &stats_key);
+
     details.usage_count -= 1;
     env.storage().persistent().set(&key, &details);
     bump_persistent(&env, &key);
@@ -2245,6 +2262,8 @@ pub fn contribute(
         .persistent()
         .get(&stats_key)
         .unwrap_or(GroupStats {
+            total_distributed: 0,
+            distribution_count: 0,
             total_raised: 0,
             contribution_count: 0,
         });
@@ -2571,4 +2590,68 @@ pub fn get_groups_by_status_paginated(
         offset,
         limit: actual_limit,
     }
+}
+
+/// Returns a list of all active fundraising campaigns with their group IDs.
+/// Reads AllGroups and checks GroupFundraising for each group.
+pub fn get_active_fundraisings(env: Env) -> Vec<ActiveFundraising> {
+    let group_ids = get_all_group_ids(&env);
+    let mut result: Vec<ActiveFundraising> = Vec::new(&env);
+
+    for id in group_ids.iter() {
+        let fundraising_key = DataKey::GroupFundraising(id.clone());
+        if let Some(config) = env.storage().persistent().get::<_, FundraisingConfig>(&fundraising_key) {
+            if config.is_active {
+                result.push_back(ActiveFundraising {
+                    group_id: id.clone(),
+                    config,
+                });
+            }
+        }
+    }
+
+    result
+}
+
+/// Returns a list of all inactive (deactivated) groups.
+/// Filters groups where is_active == false.
+pub fn get_inactive_groups(env: Env) -> Vec<BytesN<32>> {
+    let group_ids = get_all_group_ids(&env);
+    let mut result: Vec<BytesN<32>> = Vec::new(&env);
+
+    for id in group_ids.iter() {
+        if let Ok(details) = get_autoshare(env.clone(), id.clone()) {
+            if !details.is_active {
+                result.push_back(id);
+            }
+        }
+    }
+
+    result
+}
+
+/// Returns pre-aggregated statistics for a group.
+/// Includes total_distributed, distribution_count, total_raised, and contribution_count.
+pub fn get_group_stats(env: Env, id: BytesN<32>) -> GroupStats {
+    let stats_key = DataKey::GroupStats(id);
+    env.storage()
+        .persistent()
+        .get(&stats_key)
+        .unwrap_or(GroupStats {
+            total_distributed: 0,
+            distribution_count: 0,
+            total_raised: 0,
+            contribution_count: 0,
+        })
+}
+
+/// Returns the member count of a group without loading the full member list.
+pub fn get_group_member_count(env: Env, id: BytesN<32>) -> Result<u32, Error> {
+    let key = DataKey::AutoShare(id);
+    let details: AutoShareDetails = env
+        .storage()
+        .persistent()
+        .get(&key)
+        .ok_or(Error::NotFound)?;
+    Ok(details.members.len() as u32)
 }
