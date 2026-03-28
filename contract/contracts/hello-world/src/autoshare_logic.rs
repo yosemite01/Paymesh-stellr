@@ -1,17 +1,15 @@
 use crate::base::errors::Error;
 use crate::base::events::{
-    emit_contribution, emit_creator_is_member, emit_distribution,
-    emit_fundraising_reset, emit_fundraising_target_updated,
-    emit_max_members_updated, AdminTransferred, AutoshareCreated,
-    AutoshareUpdated, ContractPaused, ContractUnpaused, FundraisingStarted,
-    GroupActivated, GroupDeactivated, GroupDeleted, GroupNameUpdated,
-    GroupOwnershipTransferred, Withdrawal,
+    emit_contribution, emit_creator_is_member, emit_distribution, emit_fundraising_target_updated,
+    emit_max_members_updated, AdminTransferred, AutoshareCreated, AutoshareUpdated, ContractPaused,
+    ContractUnpaused, FundraisingStarted, GroupActivated, GroupDeactivated, GroupDeleted,
+    GroupNameUpdated, GroupOwnershipTransferred, Withdrawal,
 };
 
 use crate::base::types::{
     AutoShareDetails, DistributionHistory, DistributionRecord, FundraisingConfig,
-    FundraisingContribution, GroupMember, GroupStats, MemberAmount, MemberDistributionRecord,
-    PaymentHistory, GroupPage
+    FundraisingContribution, GroupMember, GroupPage, GroupStats, MemberAmount,
+    MemberDistributionRecord, PaymentHistory,
 };
 use soroban_sdk::{contracttype, token, Address, BytesN, Env, String, Vec};
 
@@ -865,11 +863,7 @@ pub fn set_max_members(env: Env, admin: Address, max: u32) -> Result<(), Error> 
 
 pub fn get_max_members(env: &Env) -> u32 {
     let key = DataKey::MaxMembers;
-    let max: u32 = env
-        .storage()
-        .persistent()
-        .get(&key)
-        .unwrap_or(DEFAULT_MAX_MEMBERS);
+    let max: u32 = env.storage().persistent().get(&key).unwrap_or(MAX_MEMBERS);
     if env.storage().persistent().has(&key) {
         bump_persistent(env, &key);
     }
@@ -1601,7 +1595,11 @@ pub fn delete_group(env: Env, id: BytesN<32>, caller: Address) -> Result<(), Err
 
     // Step 4: Check if group has active fundraising
     let fundraising_key = DataKey::GroupFundraising(id.clone());
-    if let Some(fundraising) = env.storage().persistent().get::<_, FundraisingConfig>(&fundraising_key) {
+    if let Some(fundraising) = env
+        .storage()
+        .persistent()
+        .get::<_, FundraisingConfig>(&fundraising_key)
+    {
         if fundraising.is_active {
             return Err(Error::GroupHasActiveFundraising);
         }
